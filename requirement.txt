@@ -1,2 +1,10 @@
 numpy
 rasterio
+pandas
+xarray
+netcdf4
+scipy
+geopandas
+matplotlib
+plotly
+streamlit
