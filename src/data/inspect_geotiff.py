@@ -1,12 +1,7 @@
 import argparse
-
 import numpy as np
 import rasterio
-
-
 NDVI_SCALE_FACTOR = 0.0001
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Inspect a NASA MOD13A3 NDVI GeoTIFF."
@@ -21,7 +16,6 @@ def main():
 
     with rasterio.open(args.file) as src:
         data = src.read(1)
-
         nodata = src.nodata
 
         # Remove NoData pixels
@@ -30,7 +24,7 @@ def main():
         else:
             valid = data
 
-        # Convert raw NDVI to physical NDVI values
+        # Convert raw values to NDVI
         ndvi = valid.astype(np.float32) * NDVI_SCALE_FACTOR
 
         print("=== NASA MOD13A3 NDVI ===")
