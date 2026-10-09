@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Earth System Fingerprints</title>
+<style>
+:root{color-scheme:dark;--bg:#02030a;--fg:#e6edf7;--mut:#8b9ab3;--pan:rgba(8,13,26,.86);--ln:rgba(140,170,220,.22);--ac:#60a5fa}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+canvas{display:block;touch-action:none}
+#brand{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:18px;pointer-events:none}
+#brand h1{margin:0;font-size:19px;letter-spacing:.02em}#brand h1 b{color:var(--ac)}
+#brand p{margin:3px 0 0;font-size:11.5px;color:var(--mut);max-width:260px;line-height:1.4}
+#nav{position:absolute;top:calc(92px + env(safe-area-inset-top,0px));left:18px;display:flex;flex-direction:column;gap:8px}
+button,label.btn{font:inherit;font-size:12.5px;background:rgba(12,18,34,.75);color:var(--fg);border:1px solid var(--c,var(--ln));padding:7px 13px;border-radius:99px;cursor:pointer;text-align:left;backdrop-filter:blur(8px)}
+button:hover,button.on{background:var(--c,var(--ac));color:#04101c}
+#tools{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:18px;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--mut)}
+label.btn input{display:none}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:14px;color:var(--mut);z-index:5}
+.lab{position:absolute;pointer-events:none;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(0,0,0,.6);border:1px solid;transform:translate(-50%,-135%);white-space:nowrap}
+#panel{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;bottom:14px;width:370px;max-width:calc(100% - 28px);overflow:auto;padding:16px;background:var(--pan);border:1px solid var(--ln);border-radius:16px;backdrop-filter:blur(14px);display:none;font-size:13px}
+#panel h2{margin:8px 0 2px;font-size:20px}.sub{color:var(--mut);font-size:12px;line-height:1.5;margin:0 0 10px}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.tabs button{padding:5px 10px;font-size:12px}
+.kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.kpi div{border:1px solid var(--ln);border-radius:10px;padding:8px 10px}.kpi small{display:block;color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.kpi b{font-size:16px}
+.badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.4)}
+svg.ch{width:100%;height:auto;margin-top:6px}svg text{fill:var(--mut);font-size:9px}
+.note{font-size:12px;line-height:1.55;color:#c8d3e6;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:6px 4px;border-bottom:1px solid var(--ln);text-align:right}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:500;font-size:11px}
+tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.05)}
+ul{padding-left:18px;margin:6px 0}li{margin:5px 0;line-height:1.5;font-size:12px;color:#c8d3e6}
+#close{padding:4px 10px;font-size:12px}
+@media(max-width:700px){#panel{top:auto;left:10px;right:10px;width:auto;max-width:none;bottom:10px;height:56%}
+ #nav{top:calc(84px + env(safe-area-inset-top,0px));flex-direction:row;flex-wrap:wrap;right:10px}#tools{display:none}}
+</style></head><body>
+<div id="loading">Rendering Earth surface…</div>
+<div id="brand"><h1>Earth System <b>Fingerprints</b></h1><p>Land-surface temperature, vegetation and soil-moisture trends from NASA Earth observation.</p></div>
+<div id="nav"></div>
+<div id="tools"><label class="btn">Load NASA Blue Marble photo<input type="file" id="tex" accept="image/*"></label>
+<span>Optional: pick the downloaded land_ocean_ice_2048.jpg for a photographic surface.</span></div>
+<div id="panel"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ================= DATA ================= */
+// Region outlines [lon,lat,...] (approximate analysis boundaries)
+const REG=[
+ {id:'bd',n:'Bangladesh',c:'#34d399',
+  poly:[88.1,26.6,89.8,26.2,89.8,25.3,91.5,25.2,92.0,25.1,92.6,24.2,92.2,23.0,92.4,21.6,92.3,20.8,91.8,22.2,90.6,22.6,89.4,21.8,89.0,21.7,88.7,22.4,88.3,23.3,88.9,24.2,88.1,24.6,88.5,25.5],
+  b:'Ganges–Brahmaputra–Meghna delta. Dense population, rice agriculture, monsoon flooding and rising heat stress.',
+  p:{lst:[29.6,.030,.45],ndvi:[.58,-.0004,.011],sm:[.30,.0008,.022]}},
+ {id:'igp',n:'Indo-Gangetic Plain',c:'#fbbf24',
+  poly:[68,29,70,31,72,33,75,32.5,77.5,30.8,79,29.5,81,28.8,84,27.4,88,26.7,88.5,25.5,86,25,83,24.5,81,25,78,26,76,26.5,74.5,26,72,25,70,24.5,68.3,25.5],
+  b:'Indus–Ganges alluvial belt across Pakistan, India, Nepal and Bangladesh. Intensive irrigated wheat–rice systems.',
+  p:{lst:[31.8,.040,.55],ndvi:[.42,.0011,.012],sm:[.19,-.0020,.020]}},
+ {id:'amz',n:'Amazon Frontier',c:'#60a5fa',
+  poly:[-50,-3,-48,-7,-50,-11,-54,-15,-60,-15,-66,-13,-70,-9,-65,-8,-58,-9,-54,-7,-53,-4],
+  b:'Southern "Arc of Deforestation" where forest meets cropland and cattle pasture, from Pará to Acre.',
+  p:{lst:[30.9,.055,.50],ndvi:[.72,-.0014,.010],sm:[.33,-.0016,.021]}}];
+REG.forEach(r=>{let a=0,o=0,n=r.poly.length/2;for(let i=0;i<r.poly.length;i+=2){o+=r.poly[i];a+=r.poly[i+1]}r.lon=o/n;r.lat=a/n});
+const LAY=[
+ {id:'lst',t:'Land Surface Temperature',s:'LST',prod:'MOD11A1 v6.1 · Terra MODIS · 1 km daily',u:'°C',d:2,y0:2001,y1:2024,what:'Annual mean daytime land-surface temperature (~10:30 local overpass).'},
+ {id:'ndvi',t:'Vegetation Index',s:'NDVI',prod:'MOD13Q1 v6.1 · Terra MODIS · 250 m, 16-day',u:'',d:4,y0:2001,y1:2024,what:'Annual mean NDVI, a proxy for vegetation greenness and canopy density.'},
+ {id:'sm',t:'Soil Moisture',s:'Soil Moisture',prod:'SPL3SMP_E · SMAP Enhanced L3 · 9 km daily',u:'m³/m³',d:4,y0:2016,y1:2024,what:'Annual mean surface (0–5 cm) volumetric soil moisture. SMAP data begin 31 Mar 2015.'}];
+
+/* ====== Trend statistics: Theil–Sen slope + Mann–Kendall ====== */
+const med=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+function erf(x){const s=Math.sign(x);x=Math.abs(x);const t=1/(1+.3275911*x);return s*(1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x))}
+const phi=z=>.5*(1+erf(z/Math.SQRT2));
+function trend(x,y){const n=y.length,sl=[];let S=0;
+ for(let i=0;i<n-1;i++)for(let j=i+1;j<n;j++){const d=y[j]-y[i];sl.push(d/(x[j]-x[i]));S+=Math.sign(d)}
+ const b=med(sl),a=med(y.map((v,i)=>v-b*x[i])),vr=n*(n-1)*(2*n+5)/18;
+ const Z=S>0?(S-1)/Math.sqrt(vr):S<0?(S+1)/Math.sqrt(vr):0;
+ return{b,a,S,Z,p:2*(1-phi(Math.abs(Z))),tau:S/(n*(n-1)/2),n}}
+// ILLUSTRATIVE series (seeded). Replace DATA[...] with real processed NASA annual means.
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const DATA={};
+REG.forEach((r,ri)=>LAY.forEach((l,li)=>{const R=rng(ri*31+li*7+5),g=()=>Math.sqrt(-2*Math.log(R()+1e-9))*Math.cos(6.2832*R()),[b0,sl,sd]=r.p[l.id];
+ const x=[],y=[];let pv=0;for(let yr=l.y0;yr<=l.y1;yr++){const e=sd*g()+.45*pv;pv=e;x.push(yr);y.push(b0+sl*(yr-l.y0)+e)}
+ DATA[r.id+l.id]={x,y,st:trend(x,y)}}));
+const fmt=(v,d)=>(v>=0?'+':'−')+Math.abs(v).toFixed(d);
+function verdict(p){return p<.01?'highly significant (p<0.01)':p<.05?'significant (p<0.05)':p<.10?'marginal (p<0.10)':'not significant (p≥0.10)'}
+
+/* ================= EARTH SURFACE ================= */
+const LAND=[ // [lon,lat,…] coarse continental outlines
+[-17,21,-16,13,-13,8,-8,4.5,-2,5,5,6,9,4,9,-1,13,-6,12,-17,15,-27,18,-33,21,-35,27,-33.5,32,-28,35,-22,36,-18,40,-15,40,-10,39,-5,42,0,46,3,51,11.5,44,11,43,12.5,39,16,37,21,34,27,32.5,30,25,31.5,20,31,15,32,11,33,10,37,3,36.5,-2,35.5,-6,35.8,-9.5,31,-13,27.5],
+[-9,37,-9,43,-2,43.5,-1,46,-4.5,48.5,2,51,5,53.5,8,55,8,57,10,57.5,11,55,14,54,20,54.5,21,57,24,58,29,60,23,60,21.5,61,25,65,21,64,17,61,19,60,16,56,12,56,11,59,8,58,5,59,5,62,14,67,20,70,28,71,33,69,41,67,34,66,40,65,44,66,54,68,60,69,68,69,73,72,80,73,87,75,100,77,113,74,129,72,140,72,160,70,170,70,180,69,180,65,178,64,170,60,163,58,160,54,156,51,155,58,143,59,137,54,141,52,140,48,135,43,130,42,129,36,127,35,126,38,125,40,121,40,122,37,119,35,121,32,122,30,120,26,117,23,110,21,108,21.5,106,18,109,12,105,9,100,13,100,8,103,1.5,100,3,98,8,98,16,94,17,92,21,90,22,87,21,85,19,80,15,80,10,77,8,73,17,72,21,69,22,67,24.5,62,25,57,26,56,27,52,28,48,30,50,27,52,24,56,25,57,23,59,22,55,17,52,16,44,12.7,43,16,39,21,35,28,34,31,36,35,36,36.7,30,36.5,27,37,26,40,23,40,24,38,22,37,21,40,19,42,14,45,12,44,16,41,18,40,16,38,15.5,38,12,42,9,44,3,43,0,39,-2,37,-5,36],
+[-168,66,-162,70,-156,71.5,-141,70,-128,70,-115,68,-95,72,-85,69,-82,66,-94,60,-92,57,-82,55,-79,52,-78,62,-72,62,-65,60,-62,57,-56,52,-60,50,-66,50,-64,46,-70,43,-70,41.5,-74,40.5,-76,38,-76,35,-81,31,-80,26,-81,25.2,-83,29,-85,30,-89,30,-90,29,-94,29.5,-97,27,-97.5,22,-96,19,-94,18,-91,18.5,-90,21,-87,21.5,-88,16,-84,15.5,-83,10.5,-80,9,-77.5,8.5,-80,7.5,-83,8,-86,11,-88,13,-92,14.5,-96,16,-105,20,-109,25,-113,31,-115,31,-117,32.5,-121,35,-124,40,-124,46,-123,48.5,-128,51,-133,56,-140,60,-148,60.5,-152,59,-158,56,-164,55,-158,58.5,-162,60,-165,62,-161,64,-168,65.5],
+[-77.5,8.5,-72,12,-67,10.5,-62,10.5,-57,6,-52,5,-50,0,-44,-2.5,-38,-4,-35,-6,-35,-9,-39,-14,-39,-18,-41,-22,-45,-23.5,-48.5,-26,-49,-29,-53,-34,-56,-34.8,-58,-34,-57,-38,-62,-39,-65,-41,-63.5,-42.5,-66,-46,-68,-50,-69,-52.5,-68,-55,-72,-54,-75,-50,-74,-44,-73,-38,-71.5,-30,-70.5,-20,-76,-14,-81,-5,-80,-2,-80,1,-78,2,-77.5,6],
+[-73,78,-60,82,-30,83.5,-20,80,-18,75,-22,70,-32,68,-42,60,-48,61,-53,67,-55,71,-62,76],
+[113,-22,114,-26,115,-34,118,-35,124,-33,131,-31.5,135,-34.5,138,-35.5,140,-38,146,-39,150,-37,153,-31,153,-26,149,-21,146,-18.5,145,-15,143,-11,141.5,-13,141,-17,136,-15,137,-12,132,-11.5,129,-15,126,-14,122,-17,118,-20.5],
+[95,5.5,98,4,104,-1,106,-6,102,-4,97,1],[109,2,111,1.5,117,7,119,1,116,-4,110,-3,109,0],[105,-6,114,-7.5,114,-8.5,106,-7],
+[131,-1,141,-2.5,147,-6,150,-10,143,-9,138,-8,133,-4],[49,-12,50,-16,47,-25,44,-24,43.5,-17,47,-15],
+[130.5,33.5,135,34,140,35,141,38,142,41,140,40,139.5,38,136,37,132,35.5],[140,42,145,43.5,142,45.5,141,43],
+[-5,50,1.5,51,0,53,-2,56,-2,58,-5,58.5,-5,56,-3,54.5,-4.5,53,-5,51.5],[-10,52,-6,52,-6,55,-8,55],
+[172,-34.5,178,-37.5,175,-41.5,173,-41,174,-39],[172.5,-40.5,174,-41.5,171,-44.5,169,-46.5,166.5,-46,171,-42.5],
+[-24,65.5,-18,66.5,-14,65,-19,63.5],[80,9.5,82,7,81,6,80,6],[120,18.5,122,18.5,122,14,124,13,121,14,120,16],
+[-85,22,-78,22.5,-74,20,-77,20,-81,22.7],[-80,73,-68,70,-62,67,-65,63,-73,64,-78,64.5],
+[-120,72,-100,73,-90,76,-80,82,-65,82,-75,78,-85,74.5,-105,70]];
+// [lat,lon,sigLat,sigLon,amp]
+const MTN=[[32,88,5,14,1],[28,85,2.5,8,1],[42,80,3,12,.6],[34,70,3,4,.6],[46.5,10,1.5,5,.6],[9,39,4,4,.5],[32,52,3,6,.5],[38,40,2,6,.35],
+ [5,-75,4,2,.5],[-5,-77,4,2,.7],[-15,-70,5,2.4,.95],[-25,-68,5,2,.9],[-35,-70,5,1.6,.75],[-45,-72,5,1.6,.5],
+ [45,-110,10,4,.7],[56,-125,7,3,.55],[38,-80,5,3,.3],[60,60,8,1.5,.3],[-3,36,6,3,.35],[-28,29,3,3,.3],[62,-148,3,6,.5]];
+const DRY=[[23,10,8,26],[24,46,7,10],[41,95,5,16],[-25,134,9,14],[-22,20,6,7],[-24,-69,6,2],[-44,-69,7,4],[30,-111,5,5],[40,-116,4,5],[37,62,5,10],[28,2,4,10],[16,30,5,8],[20,-5,6,12]];
+const GRN=[[-5,-62,9,12,1],[0,22,7,10,1],[2,110,6,12,.9],[3,100,3,3,.8],[-2,138,3,6,.8],[26,80,3,9,-1],[23.5,90,2.8,2.4,-1],[27,70,3,4,-.6],[33,115,4,6,-.7],[48,5,5,10,-.7],[40,-90,5,8,-.7],[-30,-60,5,5,-.7],[18,100,6,4,-.5]];
+const g2=(la,lo,c)=>{let dl=lo-c[1];if(dl>180)dl-=360;if(dl<-180)dl+=360;const a=(la-c[0])/c[2],b=dl/c[3];return Math.exp(-(a*a+b*b))};
+
+function h3(x,y,z){const n=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return n-Math.floor(n)}
+function vn(x,y,z){const xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),xf=x-xi,yf=y-yi,zf=z-zi,s=t=>t*t*(3-2*t),u=s(xf),v=s(yf),w=s(zf),L=(a,b,t)=>a+(b-a)*t;
+ return L(L(L(h3(xi,yi,zi),h3(xi+1,yi,zi),u),L(h3(xi,yi+1,zi),h3(xi+1,yi+1,zi),u),v),L(L(h3(xi,yi,zi+1),h3(xi+1,yi,zi+1),u),L(h3(xi,yi+1,zi+1),h3(xi+1,yi+1,zi+1),u),v),w)}
+function fbm(x,y,z,o){let a=.5,s=0,t=0;for(let i=0;i<o;i++){s+=a*vn(x,y,z);t+=a;x*=2.03;y*=2.03;z*=2.03;a*=.5}return s/t}
+const mix=(a,b,t)=>a+(b-a)*t,sm=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+
+function buildEarth(){
+ const W=1536,H=768,mc=document.createElement('canvas');mc.width=W;mc.height=H;const mg=mc.getContext('2d');mg.fillStyle='#fff';
+ LAND.forEach(a=>{mg.beginPath();for(let i=0;i<a.length;i+=2){const x=(a[i]+180)/360*W,y=(90-a[i+1])/180*H;i?mg.lineTo(x,y):mg.moveTo(x,y)}mg.closePath();mg.fill()});
+ mg.fillRect(0,(90+72)/180*H,W,H);
+ const M=mg.getImageData(0,0,W,H).data,land=new Float32Array(W*H),pos=new Float32Array(W*H*3);
+ for(let j=0;j<H;j++){const la=(90-(j+.5)/H*180)*Math.PI/180,cl=Math.cos(la),sl=Math.sin(la);
+  for(let i=0;i<W;i++){const lo=((i+.5)/W*360-180)*Math.PI/180,x=cl*Math.cos(lo),y=sl,z=-cl*Math.sin(lo),k=j*W+i;
+   const dx=(fbm(x*9,y*9,z*9,3)-.5)*14,dy=(fbm(x*9+7,y*9+3,z*9+1,3)-.5)*14;
+   const si=Math.max(0,Math.min(W-1,Math.round(i+dx))),sj=Math.max(0,Math.min(H-1,Math.round(j+dy)));
+   land[k]=M[(sj*W+si)*4]>127?1:0;pos[k*3]=x;pos[k*3+1]=y;pos[k*3+2]=z}}
+ // blur land fraction → shelf depth
+ const bl=new Float32Array(W*H),tm=new Float32Array(W*H),r=7;
+ for(let p=0;p<2;p++){const src=p?bl:land;
+  for(let j=0;j<H;j++){let s=0;for(let i=-r;i<=r;i++)s+=src[j*W+((i+W)%W)];for(let i=0;i<W;i++){tm[j*W+i]=s/(2*r+1);s+=src[j*W+((i+r+1)%W)]-src[j*W+((i-r+W)%W)]}}
+  for(let i=0;i<W;i++){for(let j=0;j<H;j++){let s=0,c=0;for(let q=-r;q<=r;q++){const jj=j+q;if(jj>=0&&jj<H){s+=tm[jj*W+i];c++}}bl[j*W+i]=s/c}}}
+ const mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c},cc=mk(),bc=mk(),sc=mk(),
+  cx=cc.getContext('2d'),bx=bc.getContext('2d'),sx=sc.getContext('2d'),ci=cx.createImageData(W,H),bi=bx.createImageData(W,H),si=sx.createImageData(W,H);
+ for(let j=0;j<H;j++){const la=90-(j+.5)/H*180;
+  for(let i=0;i<W;i++){const k=j*W+i,q=k*4,lo=(i+.5)/W*360-180,x=pos[k*3],y=pos[k*3+1],z=pos[k*3+2];let R,G,B,e=0,sp=0;
+   if(!land[k]){const f=sm(0,.5,bl[k]),n=fbm(x*30,y*30,z*30,2)-.5;
+    R=mix(5,38,f)+n*6;G=mix(26,112,f)+n*8;B=mix(66,150,f)+n*8;sp=255}
+   else{const al=Math.abs(la);let dry=0,mt=0,gr=0;
+    for(const c of DRY)dry+=g2(la,lo,c);for(const c of MTN)mt+=g2(la,lo,c)*c[4];for(const c of GRN)gr+=g2(la,lo,c)*c[4];
+    const n=fbm(x*6,y*6,z*6,5),n2=fbm(x*22,y*22,z*22,3);
+    e=Math.min(1,mt*.9+(n-.4)*.35+.04);
+    const ice=al>72||(la>60&&lo>-75&&lo<-12);
+    if(ice){const t=234+n2*14;R=t;G=t+3;B=t+8;e=ice&&al>72?.5:.45}
+    else{
+     const tr=1-sm(14,32,al);let gv=.55+gr*.5-dry*.95+(n-.5)*.7-e*.35-sm(55,68,al)*.35;gv=Math.max(0,Math.min(1,gv));
+     const desert=[200+n2*18,168+n2*14,112],grass=[126,144,72],forest=[38,88,42],crop=[118,156,58],tund=[132,130,100],rock=[122,108,92];
+     let c=[0,0,0];
+     const fo=Math.max(0,Math.min(1,gv*1.2-.35+tr*.4+(gr>.5?.35:0)))+sm(42,60,al)*.2;
+     for(let t=0;t<3;t++){let v=mix(desert[t],grass[t],sm(.15,.5,gv));v=mix(v,forest[t],sm(.45,.9,Math.min(1,fo)));if(gr<-.4)v=mix(v,crop[t],Math.min(1,-gr));
+      v=mix(v,tund[t],sm(58,72,al));v=mix(v,rock[t],sm(.25,.55,e));c[t]=v}
+     const snow=sm(.62,.82,e+n2*.08);R=mix(c[0],240,snow)+n2*10;G=mix(c[1],244,snow)+n2*10;B=mix(c[2],248,snow)+n2*8}
+    sp=20}
+   ci.data[q]=R;ci.data[q+1]=G;ci.data[q+2]=B;ci.data[q+3]=255;
+   const hv=land[k]?Math.round(60+e*195):30;bi.data[q]=bi.data[q+1]=bi.data[q+2]=hv;bi.data[q+3]=255;
+   si.data[q]=si.data[q+1]=si.data[q+2]=sp;si.data[q+3]=255}}
+ cx.putImageData(ci,0,0);bx.putImageData(bi,0,0);sx.putImageData(si,0,0);
+ // clouds
+ const kc=mk(),kx=kc.getContext('2d'),ki=kx.createImageData(W,H);
+ for(let k=0;k<W*H;k++){const x=pos[k*3],y=pos[k*3+1],z=pos[k*3+2],n=fbm(x*3.2+9,y*3.6+9,z*3.2+9,6),a=sm(.5,.72,n)*235,q=k*4;ki.data[q]=ki.data[q+1]=ki.data[q+2]=255;ki.data[q+3]=a}
+ kx.putImageData(ki,0,0);
+ const T=c=>{const t=new THREE.CanvasTexture(c);t.anisotropy=8;return t};
+ return{day:T(cc),bump:T(bc),spec:T(sc),cloud:T(kc)}}
+
+/* ================= SCENE ================= */
+const RN=new THREE.WebGLRenderer({antialias:true});RN.setPixelRatio(Math.min(devicePixelRatio,2));document.body.prepend(RN.domElement);
+const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(42,1,.1,400),HOME=new THREE.Vector3(0,.45,4.5);cam.position.copy(HOME);
+let sel=null,ret=false;
+function resize(){RN.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();HOME.z=innerWidth<innerHeight?6.6:4.5;if(!sel&&!ret)cam.position.copy(HOME)}
+addEventListener('resize',resize);resize();
+S.add(new THREE.AmbientLight(0x1a2a44,.9));const sun=new THREE.DirectionalLight(0xfff4e0,1.9);sun.position.set(6,2.2,4);S.add(sun);
+{const p=[];for(let i=0;i<7000;i++){const t=Math.random()*6.283,f=Math.acos(2*Math.random()-1),r=200;p.push(r*Math.sin(f)*Math.cos(t),r*Math.cos(f),r*Math.sin(f)*Math.sin(t))}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));S.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:1.1,sizeAttenuation:false,transparent:true,opacity:.8})))}
+const ll=(la,lo,r)=>{const p=la*Math.PI/180,l=lo*Math.PI/180;return new THREE.Vector3(r*Math.cos(p)*Math.cos(l),r*Math.sin(p),-r*Math.cos(p)*Math.sin(l))};
+const EG=new THREE.Group();S.add(EG);
+const earth=new THREE.Mesh(new THREE.SphereGeometry(1,128,128),new THREE.MeshPhongMaterial({color:0x888888,shininess:40,specular:0x335577}));EG.add(earth);
+let cloud;
+setTimeout(()=>{const T=buildEarth(),m=earth.material;m.color.set(0xffffff);m.map=T.day;m.bumpMap=T.bump;m.bumpScale=.018;m.specularMap=T.spec;m.needsUpdate=true;
+ cloud=new THREE.Mesh(new THREE.SphereGeometry(1.014,96,96),new THREE.MeshPhongMaterial({map:T.cloud,transparent:true,opacity:.62,depthWrite:false,shininess:0}));cloud.material.alphaMap=T.cloud;EG.add(cloud);
+ document.getElementById('loading').style.display='none'},40);
+S.add(new THREE.Mesh(new THREE.SphereGeometry(1.15,64,64),new THREE.ShaderMaterial({
+ vertexShader:'varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+ fragmentShader:'varying vec3 n;void main(){float i=pow(max(.64-dot(n,vec3(0,0,1.)),0.),3.);gl_FragColor=vec4(.3,.6,1.,1.)*i*1.7;}',
+ side:THREE.BackSide,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false})));
+// region outlines + markers
+const hits=[],rings=[],outl=[],labs=[];
+REG.forEach((r,i)=>{const pts=[],P=r.poly,n=P.length/2;
+ for(let k=0;k<n;k++){const a=[P[2*k],P[2*k+1]],b=[P[2*((k+1)%n)],P[2*((k+1)%n)+1]];for(let s=0;s<8;s++){const t=s/8;pts.push(ll(mix(a[1],b[1],t),mix(a[0],b[0],t),1.016))}}
+ const ln=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:r.c,transparent:true,opacity:.75,depthWrite:false}));EG.add(ln);outl.push(ln);
+ const pos=ll(r.lat,r.lon,1.02),g=new THREE.Group();g.position.copy(pos);g.lookAt(pos.clone().multiplyScalar(2));
+ g.add(new THREE.Mesh(new THREE.SphereGeometry(.012,16,16),new THREE.MeshBasicMaterial({color:r.c})));
+ const ring=new THREE.Mesh(new THREE.RingGeometry(.028,.035,40),new THREE.MeshBasicMaterial({color:r.c,transparent:true,side:THREE.DoubleSide,depthWrite:false}));g.add(ring);rings.push(ring);
+ const hit=new THREE.Mesh(new THREE.SphereGeometry(.09,12,12),new THREE.MeshBasicMaterial({visible:false}));hit.userData.i=i;g.add(hit);hits.push(hit);EG.add(g);
+ const d=document.createElement('div');d.className='lab';d.textContent=r.n;d.style.borderColor=r.c;document.body.appendChild(d);labs.push(d)});
+// moon
+const moon=new THREE.Mesh(new THREE.SphereGeometry(.27,64,64),new THREE.MeshPhongMaterial({color:0xaaa8a2,shininess:2}));S.add(moon);
+{const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d');x.fillStyle='#8f8d88';x.fillRect(0,0,512,256);
+ const R=rng(3);for(let i=0;i<900;i++){const px=R()*512,py=R()*256,r=R()*R()*14+1;x.fillStyle='rgba('+(R()<.5?'55,55,58':'170,168,160')+','+(.12+R()*.25)+')';x.beginPath();x.arc(px,py,r,0,6.283);x.fill()}
+ for(let i=0;i<9;i++){x.fillStyle='rgba(50,50,56,.3)';x.beginPath();x.ellipse(R()*512,40+R()*176,20+R()*45,14+R()*30,0,0,6.283);x.fill()}
+ moon.material.map=new THREE.CanvasTexture(c);moon.material.bumpMap=moon.material.map;moon.material.bumpScale=.6}
+// satellite
+const orb=new THREE.Group();orb.rotation.set(1.1,.4,0);S.add(orb);
+{const p=[];for(let i=0;i<=128;i++){const a=i/128*6.283;p.push(new THREE.Vector3(Math.cos(a)*1.4,0,Math.sin(a)*1.4))}orb.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),new THREE.LineBasicMaterial({color:0x7dd3fc,transparent:true,opacity:.28})))}
+const sat=new THREE.Group();orb.add(sat);sat.add(new THREE.Mesh(new THREE.BoxGeometry(.035,.035,.05),new THREE.MeshPhongMaterial({color:0xd4d4d8,shininess:80})));
+[.07,-.07].forEach(x=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.09,.003,.04),new THREE.MeshPhongMaterial({color:0x1e40af,emissive:0x1e3a8a}));m.position.x=x;sat.add(m)});
+
+/* ================= UI ================= */
+let lay=0,tab='lst',drag=null,px=0,py=0;
+const nav=document.getElementById('nav'),panel=document.getElementById('panel');
+REG.forEach((r,i)=>{const b=document.createElement('button');b.textContent=r.n;b.style.setProperty('--c',r.c);b.onclick=()=>pick(i);r.btn=b;nav.appendChild(b)});
+function pick(i){sel=REG[i];ret=false;panel.style.display='block';REG.forEach((r,k)=>r.btn.classList.toggle('on',k===i));render()}
+function closeP(){sel=null;ret=true;panel.style.display='none';REG.forEach(r=>r.btn.classList.remove('on'))}
+function chart(dd,col,l){const{x,y,st}=dd,W=320,H=170,m={l:38,r:10,t:10,b:24},ya=y.concat([st.a+st.b*x[0],st.a+st.b*x[x.length-1]]);
+ let lo=Math.min(...ya),hi=Math.max(...ya),pad=(hi-lo)*.12||.01;lo-=pad;hi+=pad;
+ const X=v=>m.l+(v-x[0])/(x[x.length-1]-x[0])*(W-m.l-m.r),Y=v=>H-m.b-(v-lo)/(hi-lo)*(H-m.t-m.b);let s='<svg class="ch" viewBox="0 0 '+W+' '+H+'">';
+ for(let t=0;t<=4;t++){const v=lo+(hi-lo)*t/4;s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="rgba(140,170,220,.15)"/><text x="'+(m.l-5)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+v.toFixed(l.d>2?3:1)+'</text>'}
+ const step=x.length>12?4:2;x.forEach((v,i)=>{if((v-x[0])%step===0)s+='<text x="'+X(v)+'" y="'+(H-8)+'" text-anchor="middle">'+v+'</text>'});
+ s+='<polyline fill="none" stroke="'+col+'" stroke-opacity=".45" stroke-width="1.2" points="'+x.map((v,i)=>X(v)+','+Y(y[i])).join(' ')+'"/>';
+ x.forEach((v,i)=>s+='<circle cx="'+X(v)+'" cy="'+Y(y[i])+'" r="2.8" fill="'+col+'"/>');
+ s+='<line x1="'+X(x[0])+'" y1="'+Y(st.a+st.b*x[0])+'" x2="'+X(x[x.length-1])+'" y2="'+Y(st.a+st.b*x[x.length-1])+'" stroke="#fff" stroke-width="1.8" stroke-dasharray="5 3"/></svg>';return s}
+function render(){const r=sel,L=LAY[lay];
+ let h='<button id="close">← Back to space</button><h2 style="color:'+r.c+'">'+r.n+'</h2><p class="sub">'+r.b+'<br>Centre '+r.lat.toFixed(1)+'°, '+r.lon.toFixed(1)+'°</p><div class="tabs">';
+ LAY.forEach((l,i)=>h+='<button data-t="'+i+'" class="'+(tab==='lay'&&i===lay?'on':'')+'">'+l.s+'</button>');
+ h+='<button data-t="cmp" class="'+(tab==='cmp'?'on':'')+'">Compare</button><button data-t="ev" class="'+(tab==='ev'?'on':'')+'">Evidence</button></div>';
+ if(tab==='lay'){const dd=DATA[r.id+L.id],s=dd.st,dir=s.b>0?'increase':'decrease',sg=s.p<.05;
+  h+='<b>'+L.t+'</b><div class="sub">'+L.prod+'<br>'+L.what+'<br>Period '+L.y0+'–'+L.y1+' (n = '+s.n+' years)</div><span class="badge">Illustrative demo series — not real NASA output</span>'+chart(dd,r.c,L)+
+  '<div class="sub" style="margin-top:2px">● annual mean &nbsp; ╌ Sen\'s slope trend line</div><div class="kpi">'+
+  '<div><small>Sen\'s slope / yr</small><b>'+fmt(s.b,L.d+1)+' '+L.u+'</b></div><div><small>Per decade</small><b>'+fmt(s.b*10,L.d)+' '+L.u+'</b></div>'+
+  '<div><small>Mann–Kendall Z</small><b>'+s.Z.toFixed(2)+'</b></div><div><small>p-value</small><b>'+(s.p<.001?'<0.001':s.p.toFixed(3))+'</b></div>'+
+  '<div><small>Kendall τ</small><b>'+s.tau.toFixed(2)+'</b></div><div><small>S statistic</small><b>'+s.S+'</b></div></div>'+
+  '<p class="note">'+L.s+' shows a <b>'+(sg?dir:'no clear direction')+'</b>: '+fmt(s.b*10,L.d)+' '+L.u+' per decade, '+verdict(s.p)+'. '+
+  (L.id==='lst'?'Rising surface temperature raises evapotranspiration demand and heat stress.':L.id==='ndvi'?'Falling NDVI can indicate land-cover change or vegetation stress; rising NDVI can reflect irrigation and intensified cropping.':'Declining soil moisture can signal drying, groundwater-driven irrigation shifts or rainfall variability.')+'</p>'}
+ else if(tab==='cmp'){h+='<b>Region comparison — trend per decade</b><div class="sub">Sen\'s slope (Mann–Kendall: * p&lt;0.05, ** p&lt;0.01)</div><table><tr><th>Region</th>'+LAY.map(l=>'<th>'+l.s+'</th>').join('')+'</tr>';
+  REG.forEach((q,qi)=>{h+='<tr class="rw" data-r="'+qi+'"><td style="color:'+q.c+'">'+q.n+'</td>'+LAY.map(l=>{const s=DATA[q.id+l.id].st;return'<td>'+(s.b>0?'▲':'▼')+' '+fmt(s.b*10,l.d).slice(1)+(s.p<.01?'**':s.p<.05?'*':'')+'</td>'}).join('')+'</tr>'});
+  h+='</table><p class="note">Units per decade: LST °C, NDVI unitless, soil moisture m³/m³. Soil-moisture trends cover 2016–2024 only, so they are less robust than the 24-year LST and NDVI trends.</p><span class="badge">Illustrative demo series</span>'}
+ else{h+='<b>Evidence &amp; method</b><ul><li><b>MOD11A1 v6.1</b> — Terra MODIS daily land surface temperature &amp; emissivity, 1 km. Annual daytime mean per region.</li><li><b>MOD13Q1 v6.1</b> — Terra MODIS 16-day NDVI/EVI, 250 m. Quality-filtered, annual mean.</li><li><b>SPL3SMP_E</b> — SMAP Enhanced L3 radiometer soil moisture, 9 km, from 31 Mar 2015.</li><li><b>Sen\'s slope</b> (Theil–Sen) is the median of all pairwise slopes. It is robust to outliers and needs no normality assumption.</li><li><b>Mann–Kendall</b> tests monotonic trend using S, Z and a two-sided p-value (normal approximation, no tie or autocorrelation correction).</li><li><b>Caveats</b>: short SMAP record, cloud contamination in monsoon and Amazon seasons, and spatial averaging of mixed land cover.</li><li><b>Visuals</b>: Earth surface is a stylised render with correct geography. Use the Blue Marble button for NASA composite imagery; it is a composite, not a live view.</li><li><b>To use real data</b>: replace the series in <code>DATA[region+layer]</code> with processed annual means. All statistics recompute automatically.</li></ul>'}
+ panel.innerHTML=h;
+ panel.querySelector('#close').onclick=closeP;
+ panel.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;if(t==='cmp'||t==='ev')tab=t;else{tab='lay';lay=+t}render()});
+ panel.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>pick(+b.dataset.r))}
+tab='lay';
+document.getElementById('tex').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const t=new THREE.Texture(im);t.needsUpdate=true;t.anisotropy=8;const m=earth.material;m.map=t;m.bumpMap=null;m.specularMap=null;m.specular.set(0x222a33);m.shininess=12;m.needsUpdate=true};im.src=fr.result};fr.readAsDataURL(f)};
+
+const el=RN.domElement,ray=new THREE.Raycaster(),m2=new THREE.Vector2();
+el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};px=e.clientX;py=e.clientY;el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove',e=>{if(!drag||sel)return;EG.rotation.y+=(e.clientX-px)*.006;EG.rotation.x=Math.max(-.9,Math.min(.9,EG.rotation.x+(e.clientY-py)*.004));px=e.clientX;py=e.clientY});
+el.addEventListener('pointerup',e=>{if(!drag)return;const mv=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);drag=null;if(mv>5)return;
+ m2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(m2,cam);const h=ray.intersectObjects(hits)[0];
+ if(h){const f=ray.intersectObject(earth)[0];if(!f||f.distance>h.distance-.06)pick(h.object.userData.i)}});
+el.addEventListener('wheel',e=>{if(sel)return;HOME.z=Math.max(2.4,Math.min(9,HOME.z+e.deltaY*.003));cam.position.z=HOME.z},{passive:true});
+
+const tgt=new THREE.Vector3(),clk=new THREE.Clock(),wrap=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI,wv=new THREE.Vector3();
+(function loop(){requestAnimationFrame(loop);const dt=Math.min(clk.getDelta(),.05),t=performance.now()/1000;
+ if(sel){const v=ll(sel.lat,sel.lon,1),ty=Math.atan2(-v.x,v.z),k=1-Math.exp(-3*dt);EG.rotation.y+=wrap(ty-EG.rotation.y)*k;EG.rotation.x*=1-k;
+  tgt.set(0,Math.sin(sel.lat*Math.PI/180)*.9,innerWidth<700?2.9:2.0)}
+ else{if(!drag)EG.rotation.y+=dt*.045;if(ret)tgt.copy(HOME)}
+ if(sel||ret){cam.position.lerp(tgt,1-Math.exp(-3*dt));if(ret&&cam.position.distanceTo(tgt)<.02)ret=false}
+ cam.lookAt(0,0,0);if(cloud)cloud.rotation.y+=dt*.008;
+ moon.position.set(Math.cos(t*.07)*3.3,Math.sin(t*.07)*.5,Math.sin(t*.07)*3.3);moon.rotation.y+=dt*.05;
+ sat.position.set(Math.cos(t*.45)*1.4,0,Math.sin(t*.45)*1.4);sat.lookAt(0,0,0);
+ REG.forEach((r,i)=>{const on=sel===r;rings[i].scale.setScalar(on?1.7:1+.35*Math.sin(t*2.5+i));outl[i].material.opacity=on?1:.6;
+  wv.copy(ll(r.lat,r.lon,1.02)).applyMatrix4(EG.matrixWorld);const vis=wv.dot(cam.position.clone().sub(wv))>0.02;wv.project(cam);
+  labs[i].style.display=vis?'block':'none';labs[i].style.left=(wv.x*.5+.5)*innerWidth+'px';labs[i].style.top=(-wv.y*.5+.5)*innerHeight+'px'});
+ RN.render(S,cam)})();
+</script></body></html>
