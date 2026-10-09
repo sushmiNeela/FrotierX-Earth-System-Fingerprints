@@ -34,6 +34,30 @@ By analyzing changes in land surface temperature, vegetation health, and soil mo
 
 > Exploring environmental change through the combined patterns of land surface temperature, vegetation greenness, and soil moisture.
 
+
+# 🌍 Earth System Fingerprints
+
+### NASA Space Apps Challenge 2026
+**Challenge:** Be An Earth System Trend Detective!
+
+> Detecting and characterizing contrasting multi-variable environmental trends using NASA Earth observations.
+
+## 🧪 Interactive Prototype Demo
+
+This repository currently contains an interactive HTML prototype developed as part of our Earth System Fingerprints project for the NASA Space Apps Challenge 2026.
+
+The prototype demonstrates the project's visual concept, including a 3D Earth visualization, study-region exploration, environmental variable displays, and illustrative trend charts.
+
+It serves as an early demonstration of how multiple environmental indicators—Land Surface Temperature (LST), vegetation greenness (NDVI), and soil moisture—could be explored together to understand regional environmental patterns.
+
+### Current Status
+
+- **Prototype:** Interactive HTML demonstration.
+- **Data visualization:** Includes illustrative data for demonstration purposes.
+- **Scientific analysis:** Real-data processing and validation are not yet fully integrated into this prototype.
+- **Future development:** Integration of processed NASA observations, validated statistical trend analysis, and machine-learning-based pattern discovery.
+
+> **Important:** The visualizations and trend values in the current prototype are illustrative and should not be interpreted as validated findings from NASA satellite observations.
 ---
 ## 1. Project Overview
 
@@ -392,18 +416,16 @@ Our team developed *Earth System Fingerprints* for the NASA Space Apps Challenge
 Team members collaborate on project development, testing, documentation, and presentation. Responsibilities may overlap as needed.
 
 Machine-learning methods, including K-Means clustering, will be explored to identify locations with similar multi-variable environmental trend patterns, subject to data availability and validation.
-## 14. Running the HTML Prototype
 
-The Earth System Fingerprints interactive prototype can be run locally using a modern web browser.
+## 14. Running the HTML Prototype
 
 ### Prerequisites
 - A modern web browser, such as Google Chrome, Microsoft Edge, or Firefox.
-- An internet connection if the prototype relies on externally hosted libraries or resources.
+- An internet connection if external libraries or resources are required.
 
 ### Steps to Run
-
-1. Clone or download this repository.
-2. Locate the `Earth_System_Fingerprints.html` file in the project directory.
+1. Clone or download the repository.
+2. Locate `Earth System Fingerprints (3).html`.
 3. Open the HTML file in a modern web browser.
 4. Check that the 3D Earth visualization, interactive controls, and charts load correctly.
 
@@ -412,19 +434,6 @@ The Earth System Fingerprints interactive prototype can be run locally using a m
 ```bash
 git clone <YOUR_PUBLIC_REPOSITORY_URL>
 cd <YOUR_REPOSITORY_FOLDER>
-## 15. Data Sources and References
-
--   NASA MODIS/Terra MOD11A1 V061:
-    https://doi.org/10.5067/MODIS/MOD11A1.061
--   MODIS/Terra MOD13Q1 V061:
-    https://lpdaac.usgs.gov/products/mod13q1v061/
--   NASA SMAP SPL3SMP_E V006:
-    https://nsidc.org/data/spl3smp_e/versions/6
--   NASA Earthdata: https://www.earthdata.nasa.gov/
--   NASA Space Apps Challenge: https://www.spaceappschallenge.org/
-
-Document product versions, selected layers, access dates, study
-boundaries, and processing decisions to support reproducibility.
 
 ## 16. Acknowledgments
 
