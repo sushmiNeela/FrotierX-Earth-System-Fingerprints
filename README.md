@@ -267,27 +267,27 @@ presented as a validated scientific analysis application.
 
 ## 8. Technology Stack
 
-## 🧰 Technology Stack
+##  Technology Stack
 
-### 🌐 Web Development and Visualization
+###  Web Development and Visualization
 - **HTML, CSS, and JavaScript** — Interactive web interface.
 - **Three.js** — Three-dimensional Earth visualization.
 - **Plotly and Matplotlib** — Interactive charts and scientific visualization.
 - **Streamlit** — Interactive data-analysis dashboard.
 
-### 🛰️ Data Processing and Geospatial Analysis
+###  Data Processing and Geospatial Analysis
 - **Python** — Scientific data processing and analysis.
 - **NumPy and Pandas** — Numerical computation and data manipulation.
 - **xarray and netCDF4** — Multidimensional satellite data processing.
 - **Rasterio** — Raster data processing.
 - **GeoPandas** — Geographic data handling.
 
-### 📈 Statistical Trend Analysis
+###  Statistical Trend Analysis
 - **SciPy** — Statistical calculations and numerical methods.
 - **Sen's Slope** — Estimation of environmental trend magnitude and direction.
 - **Mann–Kendall Trend Test** — Evaluation of evidence for monotonic environmental trends.
 
-### 🤖 Machine Learning and Pattern Discovery
+###  Machine Learning and Pattern Discovery
 - **Scikit-learn** — Machine-learning workflows, feature scaling, clustering, and model evaluation.
 - **K-Means Clustering** — A candidate unsupervised learning method for grouping locations with similar environmental trend features.
 - **Principal Component Analysis (PCA)** — An optional technique for exploring patterns in multi-variable environmental data.
@@ -298,7 +298,7 @@ Machine learning will be explored after the satellite observations have been qua
 
 ## 9. Expected Outputs
 
-## 🎯 Expected Outputs
+##  Expected Outputs
 
 The *Earth System Fingerprints* project aims to produce the following outputs using NASA Earth observation data:
 
